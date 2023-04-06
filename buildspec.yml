@@ -1,5 +1,8 @@
 version: 0.2
 phases:
+  install:
+    runtime-versions:
+      docker: latest
   pre_build:
     commands:
       - echo Logging in to Amazon ECR...
@@ -13,12 +16,30 @@ phases:
       #- docker run -e CI=true $IMAGE_REPO_NAME:$TEST_IMAGE_TAG npm run test
       - echo Build started on `date`
       - echo Building the Docker image...
-      - docker-compose -f docker-compose-prod.yml build
+      - docker-compose --file=docker-compose-prod.yml build
+      # Create Node.js server to serve Angular app
+      - echo Building the Node.js server...
+      - npm install express
+      - mkdir -p /var/app/current/src
+      - echo "var express = require('express');" > /var/app/current/src/app.js
+      - echo "var path = require('path');" >> /var/app/current/src/app.js
+      - echo "var app = express();" >> /var/app/current/src/app.js
+      - echo "var dist = path.resolve(__dirname + '/../dist/ui');" >> /var/app/current/src/app.js
+      - echo "var fallbackPath = path.resolve(dist + '/index.html');" >> /var/app/current/src/app.js
+      - echo "var port = 4200;" >> /var/app/current/src/app.js
+      - echo "var datetime = \"LastSync: \" + new Date();" >> /var/app/current/src/app.js
+      - echo "app.use(express.static(dist));" >> /var/app/current/src/app.js
+      - echo "app.get('*', function(req, res) {" >> /var/app/current/src/app.js
+      - echo "    res.sendFile(fallbackPath);" >> /var/app/current/src/app.js
+      - echo "});" >> /var/app/current/src/app.js
+      - echo "var lastsync = datetime + ': Dashboard is on port ' + port + '!';" >> /var/app/current/src/app.js
+      - echo "app.listen(port, () => console.log(lastsync));" >> /var/app/current/src/app.js
+      - echo Node.js server build completed.
   post_build:
     commands:
       - echo Build completed on `date`
       - echo Pushing the Docker image...
-      - docker-compose -f docker-compose-prod.yml push
+      - docker-compose --file=docker-compose-prod.yml push
 artifacts:
   files:
     - 'Dockerrun.aws.json'

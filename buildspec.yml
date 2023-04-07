@@ -6,29 +6,14 @@ phases:
       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
   build:
     commands:
-      # Build the Docker image
+      # Test Build (Dockerfile.dev)
+      #- echo Build started on `date`
+      #- echo Building Docker test image...
+      #- docker build -t $IMAGE_REPO_NAME:$TEST_IMAGE_TAG -f Dockerfile.dev .
+      #- docker run -e CI=true $IMAGE_REPO_NAME:$TEST_IMAGE_TAG npm run test
+      - echo Build started on `date`
       - echo Building the Docker image...
       - docker-compose --file=docker-compose-prod.yml build
-      # Create Node.js server to serve Angular app
-      - echo Building the Node.js server...
-      - npm install express
-      - |
-        cat > /var/app/current/src/app.js << EOF
-        var express = require('express');
-        var path = require('path');
-        var app = express();
-        var dist = path.resolve(__dirname + '/../dist/ui');
-        var fallbackPath = path.resolve(dist + '/index.html');
-        var port = 4200;
-        var datetime = "LastSync: " + new Date();
-        app.use(express.static(dist));
-        app.get('*', function(req, res) {
-            res.sendFile(fallbackPath);
-        });
-        var lastsync = datetime + ': Dashboard is on port ' + port + '!';
-        app.listen(port, () => console.log(lastsync));
-        EOF
-      - echo Node.js server build completed.
   post_build:
     commands:
       - echo Build completed on `date`
